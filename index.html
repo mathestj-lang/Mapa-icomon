@@ -5,31 +5,23 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>ICOMON - Localizador</title>
     
-    <!-- Bibliotecas Leaflet (CDN Super Confiável) -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com" />
-    <script src="https://cdnjs.cloudflare.com"></script>
+    <!-- Bibliotecas do Mapa (jsDelivr - a mais estável do mundo) -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net" />
+    <script src="https://cdn.jsdelivr.net"></script>
 
     <style>
-        html, body { height: 100%; margin: 0; padding: 0; overflow: hidden; }
+        html, body { height: 100%; margin: 0; padding: 0; overflow: hidden; background: #eee; }
         body { font-family: sans-serif; display: flex; flex-direction: column; }
-        
         #header { background: #004080; color: white; padding: 12px; text-align: center; z-index: 1000; flex-shrink: 0; }
-        
-        /* Ajuste de altura para o mapa aparecer no celular */
-        #map { flex-grow: 1; width: 100%; background: #e5e3df; }
-
+        #map { flex-grow: 1; width: 100%; height: 100%; }
         .info-panel { 
-            background: white; padding: 15px; 
-            border-top: 4px solid #004080; 
-            box-shadow: 0 -3px 10px rgba(0,0,0,0.2);
-            z-index: 1000; flex-shrink: 0;
+            background: white; padding: 15px; border-top: 4px solid #004080; 
+            box-shadow: 0 -3px 10px rgba(0,0,0,0.2); z-index: 1000; flex-shrink: 0;
         }
-        
         .btn-group { display: flex; gap: 10px; margin-top: 10px; }
         .btn { 
-            flex: 1; text-align: center; padding: 12px; 
-            border-radius: 8px; font-weight: bold; text-decoration: none; color: white;
-            font-size: 14px;
+            flex: 1; text-align: center; padding: 12px; border-radius: 8px; 
+            font-weight: bold; text-decoration: none; color: white; font-size: 14px;
         }
     </style>
 </head>
@@ -44,44 +36,43 @@
 
     <div class="info-panel" id="resultado">
         <strong>Aguardando ocorrência...</strong><br>
-        Mova a bolinha vermelha para localizar o técnico.
+        Arraste o marcador vermelho no mapa.
     </div>
 
 <script>
-    // Função que inicia tudo
-    function init() {
+    // Função principal
+    window.onload = function() {
         if (typeof L === 'undefined') {
-            document.getElementById('resultado').innerHTML = "Erro: Biblioteca de mapa não carregou.";
+            document.getElementById('resultado').innerHTML = "Erro de conexão: Tente desligar o Wi-Fi e usar o 4G.";
             return;
         }
 
-        // 1. Criar o mapa
+        // 1. Criar o mapa (São Paulo)
         var map = L.map('map', { zoomControl: true }).setView([-23.5505, -46.6333], 12);
         
-        // 2. Carregar as ruas
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '© OSM'
-        }).addTo(map);
+        // 2. Carregar as imagens do mapa (Roteiro profissional)
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
-        // 3. Técnicos
+        // 3. Lista de Técnicos
         var tecnicos = [
             { nome: "Técnico Silva", lat: -23.5600, lng: -46.6500, tel: "11988880001" },
             { nome: "Técnico Santos", lat: -23.5400, lng: -46.6200, tel: "11988880002" },
             { nome: "Técnico Oliveira", lat: -23.5900, lng: -46.6800, tel: "11988880003" }
         ];
 
+        // Desenhar técnicos
         tecnicos.forEach(function(tec) {
             L.circleMarker([tec.lat, tec.lng], {
                 color: 'green', fillColor: '#2ecc71', fillOpacity: 0.8, radius: 8
             }).addTo(map).bindPopup(tec.nome);
         });
 
-        // 4. Marcador de Incidente (A bola vermelha)
+        // 4. Marcador de Incidente (A bola vermelha) - CORRIGIDO
         var marcadorIncidente = L.marker([-23.5505, -46.6333], {
             draggable: true,
             icon: L.divIcon({
-                className: 'icon-vermelho',
-                html: '<div style="background:#ff0000; width:20px; height:20px; border-radius:50%; border:2px solid white; box-shadow:0 0 8px rgba(0,0,0,0.5);"></div>',
+                className: 'bola-vermelha',
+                html: '<div style="background:#ff0000; width:20px; height:20px; border-radius:50%; border:2px solid white; box-shadow:0 0 10px rgba(0,0,0,0.5);"></div>',
                 iconSize: [20, 20],
                 iconAnchor: [10, 10]
             })
@@ -103,23 +94,20 @@
 
             var km = (menorDistancia / 1000).toFixed(2);
             document.getElementById('resultado').innerHTML = `
-                <b style="color:red;">🚨 QUEDA IDENTIFICADA</b><br>
+                <b style="color:red;">🚨 INCIDENTE DETECTADO</b><br>
                 Técnico: <b>${maisProximo.nome}</b> (${km} km)<br>
                 <div class="btn-group">
                     <a href="tel:${maisProximo.tel}" class="btn" style="background:#28a745;">📞 LIGAR</a>
-                    <a href="https://wa.me{maisProximo.tel}" class="btn" style="background:#25d366;">💬 WHATSAPP</a>
+                    <a href="https://wa.me{maisProximo.tel}" class="btn" style="background:#25d366;">WHATSAPP</a>
                 </div>
             `;
         }
 
         marcadorIncidente.on('dragend', calcular);
         
-        // Pequeno ajuste para o mapa carregar os quadrados corretamente
+        // Ajuste para carregar o tamanho certo no celular
         setTimeout(function(){ map.invalidateSize(); }, 500);
-    }
-
-    // Dispara a função
-    window.onload = init;
+    };
 </script>
 </body>
 </html>
