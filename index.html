@@ -3,58 +3,126 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>ICOMON - Gestão de Incidentes</title>
+    <title>ICOMON - Localizador de Incidentes</title>
+    
+    <!-- Bibliotecas Leaflet (Mapas) -->
     <link rel="stylesheet" href="https://unpkg.com" />
+    <script src="https://unpkg.com"></script>
+
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; display: flex; flex-direction: column; height: 100vh; }
-        #header { background: #004080; color: white; padding: 15px; text-align: center; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
-        #map { flex-grow: 1; width: 100%; background: #e5e3df; }
-        .info { position: fixed; bottom: 20px; left: 15px; right: 15px; z-index: 1000; background: white; padding: 15px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); border-top: 5px solid #004080; }
-        .btn { display: block; background: #28a745; color: white; text-align: center; padding: 12px; margin-top: 10px; text-decoration: none; border-radius: 8px; font-weight: bold; }
+        body { font-family: 'Segoe UI', sans-serif; margin: 0; display: flex; flex-direction: column; height: 100vh; background: #f4f4f4; }
+        
+        /* Cabeçalho */
+        #header { background: #004080; color: white; padding: 15px; text-align: center; box-shadow: 0 2px 10px rgba(0,0,0,0.3); z-index: 1000; }
+        #header h2 { margin: 0; font-size: 18px; }
+        
+        /* Área do Mapa */
+        #map { flex-grow: 1; width: 100%; }
+
+        /* Painel de Informações (Inferior) */
+        .info-panel { 
+            position: fixed; bottom: 20px; left: 15px; right: 15px; 
+            z-index: 1000; background: white; padding: 15px; 
+            border-radius: 15px; box-shadow: 0 4px 25px rgba(0,0,0,0.4); 
+            border-top: 5px solid #004080;
+        }
+
+        /* Botões de Contato */
+        .btn-group { display: flex; gap: 10px; margin-top: 10px; }
+        .btn { 
+            flex: 1; text-align: center; padding: 12px; 
+            border-radius: 8px; font-weight: bold; text-decoration: none; color: white;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .btn-call { background: #28a745; }
+        .btn-wpp { background: #25d366; }
     </style>
 </head>
 <body>
+
     <div id="header">
-        <h2 style="margin:0;">Incidentes ICOMON</h2>
-        <p style="margin:5px 0 0; font-size:14px;">Arraste o marcador para o local da queda</p>
+        <h2>GESTÃO DE INCIDENTES ICOMON</h2>
+        <small>Arraste o círculo VERMELHO até a queda</small>
     </div>
+
     <div id="map"></div>
-    <div class="info" id="res"><b>Status:</b> Arraste o marcador azul...</div>
 
-    <script src="https://unpkg.com"></script>
-    <script>
-        window.onload = function() {
-            var map = L.map('map', { zoomControl: false }).setView([-23.5505, -46.6333], 12);
-            L.control.zoom({ position: 'topright' }).addTo(map);
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+    <div class="info-panel" id="resultado">
+        <strong>Aguardando ocorrência...</strong><br>
+        Mova o marcador vermelho no mapa para localizar o técnico mais próximo.
+    </div>
 
-            var tecnicos = [
-                { n: "Técnico Silva", lat: -23.5600, lng: -46.6500, tel: "11988880001" },
-                { n: "Técnico Santos", lat: -23.5400, lng: -46.6200, tel: "11988880002" },
-                { n: "Técnico Oliveira", lat: -23.5900, lng: -46.6800, tel: "11988880003" }
-            ];
+<script>
+    window.onload = function() {
+        // 1. Inicia o mapa (Centro de SP)
+        // Usando zoomControl false para limpar a tela no celular
+        var map = L.map('map', { zoomControl: false }).setView([-23.5505, -46.6333], 12);
+        
+        // 2. CAMADA DE MAPA PROFISSIONAL (Esri ArcGIS) - Mais estável que OpenStreetMap
+        L.tileLayer('https://server.arcgisonline.com{z}/{y}/{x}', {
+            attribution: 'Tiles &copy; Esri'
+        }).addTo(map);
 
-            tecnicos.forEach(t => L.circleMarker([t.lat, t.lng], { color: 'green', radius: 8, fillOpacity: 0.7 }).addTo(map));
+        // 3. LISTA DE TÉCNICOS (Edite os nomes e telefones aqui)
+        var tecnicos = [
+            { nome: "Técnico Silva", lat: -23.5600, lng: -46.6500, tel: "11988880001" },
+            { nome: "Técnico Santos", lat: -23.5400, lng: -46.6200, tel: "11988880002" },
+            { nome: "Técnico Oliveira", lat: -23.5900, lng: -46.6800, tel: "11988880003" },
+            { nome: "Técnico Souza", lat: -23.5200, lng: -46.6100, tel: "11988880004" }
+        ];
 
-            var marcador = L.marker([-23.5505, -46.6333], { draggable: true }).addTo(map);
+        // Desenha os técnicos como círculos verdes fixos
+        tecnicos.forEach(function(tec) {
+            L.circleMarker([tec.lat, tec.lng], {
+                color: '#1b5e20', fillColor: '#2ecc71', fillOpacity: 0.8, radius: 8
+            }).addTo(map).bindPopup("<b>" + tec.nome + "</b>");
+        });
 
-            function calc() {
-                var p = marcador.getLatLng();
-                var prox = null; var mD = Infinity;
-                tecnicos.forEach(t => {
-                    var d = map.distance(p, [t.lat, t.lng]);
-                    if (d < mD) { mD = d; prox = t; }
-                });
-                var km = (mD / 1000).toFixed(2);
-                document.getElementById('res').innerHTML = `
-                    <b style="color:red">ALERTA DE QUEDA!</b><br>
-                    Técnico mais próximo: <b>${prox.n}</b> (${km} km)<br>
-                    <a href="tel:${prox.tel}" class="btn">LIGAR PARA TÉCNICO</a>
-                `;
-            }
-            marcador.on('dragend', calc);
-            marcador.on('moveend', calc);
-        };
-    </script>
+        // 4. MARCADOR DE INCIDENTE (Círculo Vermelho Arrastável)
+        // Criamos um marcador invisível que carrega um "ícone" de círculo vermelho
+        var incidentePos = [-23.5505, -46.6333];
+        var marcadorIncidente = L.marker(incidentePos, {
+            draggable: true,
+            icon: L.divIcon({
+                className: 'custom-div-icon',
+                html: "<div style='background-color:#ff0000; width:20px; height:20px; border-radius:50%; border:3px solid white; box-shadow: 0 0 10px rgba(0,0,0,0.5);'></div>",
+                iconSize: [20, 20],
+                iconAnchor: [10, 10]
+            })
+        }).addTo(map);
+
+        // 5. LÓGICA DE CÁLCULO
+        function atualizarProximidade() {
+            var pos = marcadorIncidente.getLatLng();
+            var maisProximo = null;
+            var menorDistancia = Infinity;
+
+            tecnicos.forEach(function(tec) {
+                var d = map.distance(pos, [tec.lat, tec.lng]); // Distância em metros
+                if (d < menorDistancia) {
+                    menorDistancia = d;
+                    maisProximo = tec;
+                }
+            });
+
+            var km = (menorDistancia / 1000).toFixed(2);
+            
+            // Atualiza o painel inferior
+            document.getElementById('resultado').innerHTML = `
+                <strong style="color: #d32f2f;">🚨 INCIDENTE DETECTADO</strong><br>
+                Técnico: <b>${maisProximo.nome}</b> está a <b>${km} km</b><br>
+                <div class="btn-group">
+                    <a href="tel:${maisProximo.tel}" class="btn btn-call">📞 LIGAR</a>
+                    <a href="https://wa.me{maisProximo.tel}" class="btn btn-wpp">💬 WHATSAPP</a>
+                </div>
+            `;
+        }
+
+        // Eventos para detectar o movimento do marcador
+        marcadorIncidente.on('dragend', atualizarProximidade);
+        marcadorIncidente.on('move', atualizarProximidade); // Atualiza enquanto arrasta
+    };
+</script>
+
 </body>
 </html>
