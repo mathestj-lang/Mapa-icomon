@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>ICOMON - Gestão de Incidentes</title>
+    <link rel="stylesheet" href="https://unpkg.com" />
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; display: flex; flex-direction: column; height: 100vh; }
+        #header { background: #004080; color: white; padding: 15px; text-align: center; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+        #map { flex-grow: 1; width: 100%; background: #e5e3df; }
+        .info { position: fixed; bottom: 20px; left: 15px; right: 15px; z-index: 1000; background: white; padding: 15px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); border-top: 5px solid #004080; }
+        .btn { display: block; background: #28a745; color: white; text-align: center; padding: 12px; margin-top: 10px; text-decoration: none; border-radius: 8px; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div id="header">
+        <h2 style="margin:0;">Incidentes ICOMON</h2>
+        <p style="margin:5px 0 0; font-size:14px;">Arraste o marcador para o local da queda</p>
+    </div>
+    <div id="map"></div>
+    <div class="info" id="res"><b>Status:</b> Arraste o marcador azul...</div>
+
+    <script src="https://unpkg.com"></script>
+    <script>
+        window.onload = function() {
+            var map = L.map('map', { zoomControl: false }).setView([-23.5505, -46.6333], 12);
+            L.control.zoom({ position: 'topright' }).addTo(map);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+
+            var tecnicos = [
+                { n: "Técnico Silva", lat: -23.5600, lng: -46.6500, tel: "11988880001" },
+                { n: "Técnico Santos", lat: -23.5400, lng: -46.6200, tel: "11988880002" },
+                { n: "Técnico Oliveira", lat: -23.5900, lng: -46.6800, tel: "11988880003" }
+            ];
+
+            tecnicos.forEach(t => L.circleMarker([t.lat, t.lng], { color: 'green', radius: 8, fillOpacity: 0.7 }).addTo(map));
+
+            var marcador = L.marker([-23.5505, -46.6333], { draggable: true }).addTo(map);
+
+            function calc() {
+                var p = marcador.getLatLng();
+                var prox = null; var mD = Infinity;
+                tecnicos.forEach(t => {
+                    var d = map.distance(p, [t.lat, t.lng]);
+                    if (d < mD) { mD = d; prox = t; }
+                });
+                var km = (mD / 1000).toFixed(2);
+                document.getElementById('res').innerHTML = `
+                    <b style="color:red">ALERTA DE QUEDA!</b><br>
+                    Técnico mais próximo: <b>${prox.n}</b> (${km} km)<br>
+                    <a href="tel:${prox.tel}" class="btn">LIGAR PARA TÉCNICO</a>
+                `;
+            }
+            marcador.on('dragend', calc);
+            marcador.on('moveend', calc);
+        };
+    </script>
+</body>
+</html>
